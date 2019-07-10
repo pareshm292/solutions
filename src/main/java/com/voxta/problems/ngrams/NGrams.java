@@ -1,24 +1,37 @@
 package com.voxta.problems.ngrams;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class NGrams {
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, URISyntaxException {
 
-		String text =	Files.lines(Paths.get(new File("src/main/resources/war-of-the-worlds.txt").toURI()))
+		String filename = args[0];
+	//	String text = Files.lines(Paths.get(NGrams.class.getClassLoader().getResource("war-of-the-worlds.txt").toURI()))
+		String text =	Files.lines(Paths.get(new File(filename + ".txt").toURI()))
 				.filter(line -> !line.isEmpty())
 				.collect(Collectors.joining(" "));
-
+		
+		FileWriter writer = new FileWriter(new File(filename + "-output.txt"));
+		//writer.append("abc");
+		
 		/*
 		 * Map<String,Long> map = Arrays.stream(text.split("[.]")) .peek(line
 		 * ->System.out.println(line)) .map(str -> str.trim()) .flatMap(str ->
@@ -31,20 +44,61 @@ public class NGrams {
 		 * collect(Collectors.toMap(Entry::getKey , Entry::getValue)));
 		 */
 
+		Integer n = 3;
+		
+		ngrams(text,n);
+		
 		System.out.println("Sentences in this text are : " + countSentences(text));
-
+		
 		characterCount(text);
 
 		averageSentenceLength(text);
 
 		numberOfSentenceHavingNumbers(text);
 
-		meanWordFreqAndStandardDeviation(text);
+		meanWordFreqAndStandardDeviation(text,writer);
 		
+		//writer.flush();
+		writer.close();
+	}
+
+	private static void ngrams(String text,Integer n) {
+		
+		Arrays.stream(text.split("[\\.\\?\\!]"))
+			.map(sentence -> sentence.trim())
+			.forEach(sentence -> printNGrams(sentence,n));
+	}
+
+	private static void printNGrams(String sentence,Integer n) {
+		
+		System.out.println("For sentence :: " + sentence);
+		
+		String[] words = sentence.split(" ");
+		
+		for(int i = 1 ; i <= n ; i++) {
+			
+			printNthGram(words , i);
+		
+		}
+	}
+
+	private static void printNthGram(String[] words , int i) {
+		
+		List<String> result = new ArrayList<>();
+		
+		for(int j = 0 ; j < words.length - i + 1 ; j++) {
+			StringBuilder sb = new StringBuilder();
+			for(int k = 0 ; k < i ; k++) {
+				if(k > 0) sb.append(" ");
+				sb.append(words[j+k]);
+			}
+			result.add(sb.toString());
+		}
+		System.out.println(i + " gram " + result);
 		
 	}
 
-	private static void meanWordFreqAndStandardDeviation(String text) {
+	private static void meanWordFreqAndStandardDeviation(String text, FileWriter writer ) throws IOException {
 			
 		Map<String,Long> wordFreq = Arrays.stream(text.split("[\\.\\?\\!]"))
 				.flatMap(sentence -> Arrays.stream(sentence.split(" ")))
@@ -52,8 +106,14 @@ public class NGrams {
 				.map(String::toLowerCase)
 				.collect(Collectors.groupingBy(Function.identity() , Collectors.counting()));
 		
-	//	System.out.println(wordFreq);
 		
+		Map<String,Long> sortedMap = wordFreq.entrySet()
+							.stream()
+							.sorted(Collections.reverseOrder(Entry.comparingByValue()))
+							.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (e1,e2) -> e2 , LinkedHashMap::new));
+	//	System.out.println(wordFreq);
+		writer.append(sortedMap.toString());
+		writer.flush();
 		double average = wordFreq.values().stream().collect(Collectors.averagingDouble(d -> d));
 		
 		System.out.println("Mean word frequency : " + average);
@@ -70,6 +130,7 @@ public class NGrams {
 		
 		System.out.println("Standard Deviation : " + stdDev);
 	
+		System.out.println("Difference between mean and std. deviation : " + (average - stdDev));
 	}
 
 	private static void numberOfSentenceHavingNumbers(String text) {

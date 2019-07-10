@@ -83,7 +83,9 @@ public class Bank {
 		}
 
 	}
-
+	/*
+	 * Method to add customer to relevant queue.
+	 */
 	private void serviceCustomer(Customer customer,int timeStamp) {
 
 		boolean addedToQueue = false;
